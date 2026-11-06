@@ -2,6 +2,8 @@
 
 Legend: 🧑 = you do it · 🤖 = Claude does it (after explaining) · 🤝 = together
 
+How each step is built and what "done" means: [PLAN.md](PLAN.md).
+
 Each phase ends with a result you can compare against the one before it. Stopping after Phase 2
 or 3 still leaves a complete project.
 

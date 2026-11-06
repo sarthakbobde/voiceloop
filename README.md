@@ -11,7 +11,8 @@ its own failures. Built step by step:
 4. **RL and self-improvement** — GRPO on spoken tasks, plus a retrain-on-failures loop.
 5. **Persistent memory** — recall across sessions.
 
-Each phase is measured against the one before it. Roadmap: [docs/STEPS.md](docs/STEPS.md) ·
+Each phase is measured against the one before it. Plan: [docs/PLAN.md](docs/PLAN.md) ·
+roadmap: [docs/STEPS.md](docs/STEPS.md) ·
 decisions: [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Quick start
