@@ -1,0 +1,49 @@
+[project]
+name = "voiceloop"
+version = "0.1.0"
+description = "A full-duplex voice agent: cascaded baseline, speech-in LLM, learned turn-taking, RL, memory."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+]
+
+[project.optional-dependencies]
+# Phase 1 real-time stack, installed on the laptop only (not in CI). See docs/DECISIONS.md#adr-002
+realtime = [
+    "sounddevice>=0.4",
+    "faster-whisper>=1.0",
+    "silero-vad>=5.0",
+    "llama-cpp-python>=0.2.80",
+]
+
+[project.scripts]
+voiceloop = "voiceloop.cli:main"
+# Training deps (torch, transformers, peft, trl) are installed on Kaggle only.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/voiceloop"]
+
+[tool.uv]
+# Dev-only tools: installed by `uv sync`, not part of the package.
+dev-dependencies = [
+    "pytest",
+    "ruff",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, B likely bugs, UP modern syntax
+select = ["E", "W", "F", "I", "B", "UP"]

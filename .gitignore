@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# audio, data and model artefacts never go in git
+data/*
+!data/.gitkeep
+models/
+*.wav
+*.flac
+*.gguf
+*.safetensors
+evals/runs/
