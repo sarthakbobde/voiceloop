@@ -9,7 +9,7 @@ or 3 still leaves a complete project.
 
 ## Phase 0 — Foundations
 - [x] 🤖 **00 Scaffold** — package, `voiceloop` CLI, `voiceloop doctor`, tests, CI, docs.
-- [ ] 🧑 **01 Environment setup** — ffmpeg, the `realtime` extra, CUDA build of llama-cpp-python, HF cache on E:; replace the VRAM estimates in `configs/models.yaml` with measured numbers.
+- [ ] 🧑 **01 Environment setup** — ffmpeg, the `realtime` extra, the prebuilt llama.cpp CUDA server (no compiler needed), HF cache on E: (done); replace the VRAM estimates in `configs/models.yaml` with measured numbers.
 
 ## Phase 1 — Cascaded baseline with real-time turn-taking
 - [ ] 🤝 **02 Mic → VAD → ASR loop** — streaming faster-whisper behind Silero VAD; print partial transcripts.
