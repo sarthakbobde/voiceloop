@@ -9,7 +9,7 @@ or 3 still leaves a complete project.
 
 ## Phase 0 — Foundations
 - [x] 🤖 **00 Scaffold** — package, `voiceloop` CLI, `voiceloop doctor`, tests, CI, docs.
-- [ ] 🧑 **01 Environment setup** — ffmpeg, the `realtime` extra, the prebuilt llama.cpp CUDA server (no compiler needed), HF cache on E: (done); replace the VRAM estimates in `configs/models.yaml` with measured numbers.
+- [ ] 🧑 **01 Environment setup** — ffmpeg, the `realtime` extra, the prebuilt llama.cpp CUDA server (no compiler needed), HF cache on E: (done); replace the VRAM estimates in `configs/models.yaml` with measured numbers. *Done: ffmpeg, the extra, llama.cpp + Qwen (78 tok/s), Whisper small on the GPU, VRAM measured (~1.57 GB) and put in the config, `av<19` pinned (ADR-010). Left: Kokoro TTS.*
 
 ## Phase 1 — Cascaded baseline with real-time turn-taking
 - [ ] 🤝 **02 Mic → VAD → ASR loop** — streaming faster-whisper behind Silero VAD; print partial transcripts.
