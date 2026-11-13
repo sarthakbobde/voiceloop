@@ -42,7 +42,7 @@ the language model. The agent talks to the server with the `openai` client.
 | Turn manager | State machine deciding who has the floor | pure Python | CPU | 📝 |
 | LLM | Generates the reply, streamed | Qwen2.5-1.5B-Instruct Q4_K_M in `llama-server` | GPU | 🔧 files downloaded and verified, server runs |
 | Sentence splitter | Cuts the token stream into sentences for TTS | pure Python | CPU | 📝 |
-| TTS | Speech from text, sentence by sentence | Kokoro-82M (Piper as fallback) | CPU | 📝 (not installed) |
+| TTS | Speech from text, sentence by sentence | Kokoro-82M int8 via `kokoro-onnx` (Piper as fallback) | CPU | 🔧 installed; 0.42 real-time factor (ADR-011) |
 | Audio out | Playback queue that can be cleared instantly | `sounddevice` | CPU | 📝 |
 | Event log | Timestamped events from every stage | `pydantic` records written as JSON lines | disk | 📝 |
 | Eval harness | Replays recordings, computes latency and turn-taking metrics | pure Python | CPU | 📝 |
@@ -145,6 +145,9 @@ touching the turn manager.
 | `data/` | Recordings and datasets (audio) | no |
 | `models/llama.cpp/bin/` | llama.cpp b12211 CUDA 12.4 binaries (1.2 GB) | no |
 | `models/qwen/` | `qwen2.5-1.5b-instruct-q4_k_m.gguf` (1.04 GiB) | no |
+| `models/whisper-small/` | faster-whisper small, 4 files (483.5 MB weights) | no |
+| `models/kokoro/` | `kokoro-v1.0.int8.onnx` (92 MB), `voices-v1.0.bin` (28 MB), `sha256.txt` | no |
+| `data/samples/` | Kokoro test audio (`kokoro_short.wav`, `kokoro_long.wav`) | no |
 | `.venv/` | Python environment | no |
 | `E:\hf_cache` (outside the repo) | Hugging Face model cache (`HF_HOME`) | n/a |
 
@@ -163,7 +166,7 @@ VRAM (Turing: fp16, no bf16, no tensor cores), Windows 11.
 | Whisper small int8 | GPU | ~1000 MiB | **413 MiB** (after a transcription) |
 | Qwen2.5-1.5B Q4_K_M + 2048 context | GPU | ~1800 MiB | **1128 MiB** (server loaded, 4 slots) |
 | Silero VAD | CPU | 0 | n/a |
-| Kokoro-82M | CPU | 0 | n/a |
+| Kokoro-82M int8 (ONNX) | CPU | 0 | no VRAM; 422 MiB of RAM at peak |
 
 - **Both GPU models together use about 1567 MiB** over the desktop baseline (LLM 1154 + Whisper
   413, measured 2026-11-13). Free VRAM varies with other apps (3296 MiB with a browser open, over
@@ -216,7 +219,8 @@ replay mode come first.
 ## 9. Known limits and open questions
 
 - **Not measured yet:** localhost HTTP overhead to the LLM server; speech recognition accuracy on
-  real microphone speech (only a synthetic voice was tested); Kokoro's speed and memory.
+  real microphone speech (only a synthetic voice was tested); how Kokoro sounds in a real
+  conversation, which is judged by ear.
 - **Whisper on the GPU borrows cuBLAS DLLs from the llama.cpp folder** and needs `av<19`
   (ADR-010). The `av<19` cap is applied; the DLL-path helper arrives with the ASR wrapper in
   Step 02, so until then a script must put `models/llama.cpp/bin` on `PATH` itself.
@@ -224,5 +228,7 @@ replay mode come first.
   first; an echo canceller is a later improvement.
 - **One-minute first server start:** probably one-time GPU-code compilation (ADR-005); later
   starts took 2 s. The agent should still start the server once and keep it running.
-- **TTS:** Kokoro is the plan; it is not installed, and Piper is the fallback.
-- **Model licences** are to be confirmed before the repo is published.
+- **TTS speed:** Kokoro takes 2.7 s to make a 6.5 s sentence, so replies must be spoken in short
+  chunks, a short first chunk starting audio in about 0.7 s (ADR-011). Piper remains the fallback.
+- **Licences to confirm before publishing:** the Qwen2.5-1.5B licence, and espeak-ng (bundled by
+  `espeakng-loader`, believed to be GPL-3.0). Whisper (MIT) and Kokoro (Apache 2.0) are confirmed.

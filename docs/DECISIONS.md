@@ -23,6 +23,7 @@ Record): the context, the options considered, what was chosen, and the consequen
 | [008](#adr-008) | Run benchmarks plugged in and record the power state | Accepted | 2026-11-09 |
 | [009](#adr-009) | Budget VRAM against free memory, not total (amends ADR-002) | Accepted; `doctor` implements it | 2026-11-09 |
 | [010](#adr-010) | Whisper small on the GPU: cap `av<19`, reuse llama.cpp's cuBLAS DLLs | Accepted; `av` cap applied | 2026-11-13 |
+| [011](#adr-011) | Text-to-speech = Kokoro-82M int8 through `kokoro-onnx`, on the CPU | Accepted | 2026-11-13 |
 
 ## Changes from the original plan
 
@@ -39,6 +40,7 @@ RL → memory) are **unchanged**.
 | PyTorch | Not a dependency | Arrives CPU-only through `silero-vad`; GPU PyTorch only on Kaggle | VAD runs on the CPU, so a CPU build is enough for Phase 1 | [007](#adr-007) |
 | Benchmarking | No rule | Plugged in, performance mode, power state recorded | On battery the GPU memory clock dropped to 810 MHz and generation was about 3× slower | [008](#adr-008) |
 | VRAM budget | "needs ~3300 MiB, GPU has 4096: ok" | Windows already uses ~800 MiB; only 3296 MiB is free, so the margin is about zero | `doctor` compared against total VRAM | [009](#adr-009) |
+| TTS engine | "Kokoro-82M (Piper as fallback)", package not chosen | Kokoro-82M int8 ONNX through `kokoro-onnx`, not the PyTorch `kokoro` package | Lightest route: no PyTorch or `transformers` chain; Piper's package is GPL-3.0 | [011](#adr-011) |
 | Speech recognition on the GPU | "faster-whisper small int8 on the GPU" | Same, but needs `av<19` and cuBLAS DLLs borrowed from the llama.cpp folder | PyAV 19 broke `faster-whisper`; no CUDA Toolkit installed | [010](#adr-010) |
 | VRAM estimates | ~2800 MiB for the GPU stack | Measured ~1567 MiB (LLM 1154 + Whisper 413) | Estimates were conservative | [009](#adr-009) |
 | Docs | README, STEPS, DECISIONS | Added `PLAN.md`, `ARCHITECTURE.md`, `WORKING-WITH-CLAUDE.md` | The *how*, the structure, and working practices needed their own homes | none |
@@ -59,6 +61,7 @@ What changed and when. Commit hashes are in the VoiceLoop repo.
 | 2026-11-13 | Plugged in and re-measured (ADR-008): Qwen Q4_K_M generates at 78 tok/s on the GPU (was 19.5 on battery) and 26 on the CPU. Server ready in 2 s. LLM VRAM measured at 1128 MiB (ADR-009). First streamed replies through the `openai` client: 3 runs, ~75 tok/s. |
 | 2026-11-13 | Whisper small (Systran, MIT) downloaded and verified into `models/whisper-small/`. Needed `av<19` and cuBLAS from the llama.cpp folder to run on the GPU: 11.6× real time, +413 MiB (ADR-010, proposed). Both GPU models together measured at ~1.57 GB. |
 | 2026-11-13 | ADR-010 applied: `av<19` pinned in the `realtime` extra; measured VRAM (LLM 1154, Whisper 413) put in `configs/models.yaml`, so `doctor` now needs ~2067 MiB. The free-memory test now builds its numbers from the config. 13 tests pass; Whisper transcribes on the GPU from the plain project environment. Not committed. |
+| 2026-11-13 | Committed and pushed (`b51a617`, `b22c471`, `f0286e8`); CI green on all four runs. Kokoro-82M int8 and `kokoro-onnx` installed (ADR-011): 0.42 real-time factor on the CPU, 422 MiB RAM peak. No publisher checksum exists for the Kokoro files. **Step 01 complete.** |
 
 ## Template
 
@@ -369,3 +372,46 @@ needed **no cuDNN and no extra download**.
   +413 MiB (ADR-009).
 - The test audio was a synthetic Windows voice ("Microsoft David"), transcribed exactly. Accuracy
   on real microphone speech is untested; word error rate is measured in Step 05.
+
+<a id="adr-011"></a>
+## ADR-011 — Text-to-speech: Kokoro-82M int8 through `kokoro-onnx`, on the CPU
+**Status:** Accepted · **Date:** 2026-11-13 · **Step:** 01
+
+### Context
+ADR-002 chose Kokoro-82M on the CPU with Piper as the fallback, but not the package or the model
+file. ADR-007 listed the TTS engine as "not yet added". Kokoro is Apache 2.0.
+
+### Options
+
+| | A: `kokoro-onnx` + int8 ONNX | B: `kokoro` (PyTorch) | C: Piper |
+|---|---|---|---|
+| Model files | 92.4 MB model + 28.2 MB voices | 327 MB `.pth` | one voice, 63.2 MB |
+| Packages | 7 small (`onnxruntime` and `numpy` already present) | PyTorch, `transformers`, `misaki[en]` | `piper-tts`, 2 dependencies |
+| espeak-ng | bundled by `espeakng-loader` (Windows wheel) | bundled via `misaki` | bundled |
+| Package licence | MIT | Apache 2.0 | **GPL-3.0-or-later** |
+
+### Decision
+Option A. From the `thewh1teagle/kokoro-onnx` release `model-files-v1.0`, into `models/kokoro/`
+(git-ignored): `kokoro-v1.0.int8.onnx` (92,361,271 bytes) and `voices-v1.0.bin` (28,214,398 bytes,
+54 voices). Installed with `uv add --optional realtime kokoro-onnx` (0.6.1). Voice `af_heart`.
+
+### Consequences
+- **The files could not be verified against a publisher checksum.** GitHub shows no digest for these
+  older release assets, and Hugging Face's `model_quantized.onnx` is a different conversion (728
+  bytes different, other hash), so it could not stand in. What was checked: the header is a genuine
+  ONNX file, the voices file loads as a NumPy archive with `allow_pickle=False` (so it cannot run
+  code), the source is the project's official release over HTTPS, and our own SHA-256 values are
+  kept in `models/kokoro/sha256.txt`:
+  `6e742170…06cb` (model) and `bca610b8…bf7d` (voices).
+- **Measured on the CPU, plugged in:** about 0.42 real-time factor (2.3× faster than real time),
+  steady over 6 runs; 0.64–0.70 s to make a 1.5 s sentence; 2.7 s for a 6.5 s sentence; load 1.6 s;
+  186 MiB of RAM after loading, 422 MiB peak. No VRAM.
+- **Design consequence for Step 03:** a whole long reply cannot be synthesized before speaking. The
+  reply must be cut into short chunks (clauses and sentences) and each spoken as soon as it is
+  ready; a short first chunk starts audio in about 0.7 s. `kokoro-onnx` also offers a streaming
+  call, to be evaluated then.
+- int8 trades some voice quality for speed. The fp32 model (325 MB) is the upgrade if it sounds
+  poor; quality is judged by ear, not measured.
+- **Licence to confirm before publishing:** `espeakng-loader` bundles espeak-ng, which I believe is
+  GPL-3.0. It is used as a separate library, but the terms should be checked. Piper stays the
+  fallback, with its GPL package in mind.
