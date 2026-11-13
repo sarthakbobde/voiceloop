@@ -19,6 +19,7 @@ realtime = [
     "silero-vad>=5.0",
     # The LLM runs in the prebuilt llama.cpp server; we talk to it over its OpenAI-compatible API.
     "openai>=1.40",
+    "kokoro-onnx>=0.6.1",
 ]
 
 [project.scripts]
