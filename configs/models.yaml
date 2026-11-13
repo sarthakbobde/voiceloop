@@ -1,5 +1,5 @@
 # Phase 1 local stack, sized for a 4 GB GTX 1650 (ADR-002).
-# vram_mib values are estimates; Step 01 replaces them with measured numbers.
+# vram_mib is what the stage added to GPU memory when measured on 2026-11-13 (ADR-009, ADR-010).
 stack:
   vad:
     model: silero-vad
@@ -8,11 +8,11 @@ stack:
   asr:
     model: faster-whisper small (int8)
     device: cuda
-    vram_mib: 1000
+    vram_mib: 413
   llm:
     model: Qwen2.5-1.5B-Instruct Q4_K_M (GGUF)
     device: cuda
-    vram_mib: 1800
+    vram_mib: 1154
   tts:
     model: kokoro-82m
     device: cpu

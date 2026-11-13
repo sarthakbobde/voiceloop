@@ -14,6 +14,8 @@ dependencies = [
 realtime = [
     "sounddevice>=0.4",
     "faster-whisper>=1.0",
+    # faster-whisper 1.2.1 passes an argument that PyAV 19 removed. See docs/DECISIONS.md#adr-010
+    "av<19",
     "silero-vad>=5.0",
     # The LLM runs in the prebuilt llama.cpp server; we talk to it over its OpenAI-compatible API.
     "openai>=1.40",
@@ -30,9 +32,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/voiceloop"]
 
-[tool.uv]
+[dependency-groups]
 # Dev-only tools: installed by `uv sync`, not part of the package.
-dev-dependencies = [
+dev = [
     "pytest",
     "ruff",
 ]
